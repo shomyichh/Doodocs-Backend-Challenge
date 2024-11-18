@@ -3,6 +3,7 @@ package handlers
 import (
 	"doodocs/internal/models"
 	"doodocs/internal/services"
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -22,6 +23,7 @@ func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := r.ParseMultipartForm(100000); err != nil {
+		http.Error(w, "Failed to parse form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -31,6 +33,17 @@ func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
+
+	allowedMimeTypes := map[string]bool{
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": true,
+		"application/pdf": true,
+	}
+
+	mimeType := header.Header.Get("Content-Type")
+	if !allowedMimeTypes[mimeType] {
+		http.Error(w, fmt.Sprintf("File type %s is not allowed", mimeType), http.StatusBadRequest)
+		return
+	}
 
 	tempFilePath, err := h.mailService.SaveFile(file, header)
 	if err != nil {
@@ -52,6 +65,7 @@ func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 		Body:           "Please find the attached file.",
 		AttachmentPath: tempFilePath,
 	}
+
 	err = h.mailService.SendMail(mailDetails)
 	if err != nil {
 		http.Error(w, "Failed to send email: "+err.Error(), http.StatusInternalServerError)
