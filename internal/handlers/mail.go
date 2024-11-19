@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"doodocs/internal/errors"
 	"doodocs/internal/models"
 	"doodocs/internal/services"
 	"fmt"
@@ -18,18 +19,18 @@ func NewMailHandler(mailService *services.MailService) *MailHandler {
 
 func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		errors.HandleErrorXML(w, "Method not allowed", http.StatusMethodNotAllowed, "Only POST method is allowed for sending emails.")
 		return
 	}
 
 	if err := r.ParseMultipartForm(100000); err != nil {
-		http.Error(w, "Failed to parse form: "+err.Error(), http.StatusBadRequest)
+		errors.HandleErrorXML(w, "Failed to parse form", http.StatusBadRequest, err.Error())
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "Failed to read file: "+err.Error(), http.StatusBadRequest)
+		errors.HandleErrorXML(w, "Failed to read file", http.StatusBadRequest, err.Error())
 		return
 	}
 	defer file.Close()
@@ -41,20 +42,20 @@ func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 
 	mimeType := header.Header.Get("Content-Type")
 	if !allowedMimeTypes[mimeType] {
-		http.Error(w, fmt.Sprintf("File type %s is not allowed", mimeType), http.StatusBadRequest)
+		errors.HandleErrorXML(w, "Invalid file type", http.StatusBadRequest, fmt.Sprintf("File type %s is not allowed", mimeType))
 		return
 	}
 
 	tempFilePath, err := h.mailService.SaveFile(file, header)
 	if err != nil {
-		http.Error(w, "Failed to save file: "+err.Error(), http.StatusInternalServerError)
+		errors.HandleErrorXML(w, "Failed to save file", http.StatusInternalServerError, err.Error())
 		return
 	}
 	defer h.mailService.RemoveFile(tempFilePath)
 
 	emails := r.FormValue("emails")
 	if emails == "" {
-		http.Error(w, "Emails are required", http.StatusBadRequest)
+		errors.HandleErrorXML(w, "Emails are required", http.StatusBadRequest, "Please provide at least one email address.")
 		return
 	}
 	emailList := strings.Split(emails, ",")
@@ -68,7 +69,7 @@ func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 
 	err = h.mailService.SendMail(mailDetails)
 	if err != nil {
-		http.Error(w, "Failed to send email: "+err.Error(), http.StatusInternalServerError)
+		errors.HandleErrorXML(w, "Failed to send email", http.StatusInternalServerError, err.Error())
 		return
 	}
 
