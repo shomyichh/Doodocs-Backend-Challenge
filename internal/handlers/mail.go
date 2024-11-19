@@ -23,7 +23,7 @@ func (h *MailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseMultipartForm(100000); err != nil {
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		errors.HandleErrorXML(w, "Failed to parse form", http.StatusBadRequest, err.Error())
 		return
 	}
