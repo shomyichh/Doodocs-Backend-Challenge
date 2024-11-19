@@ -22,7 +22,7 @@ func main() {
 	smtpPort, err := strconv.Atoi(config.Get("SMTP_PORT"))
 
 	if err != nil {
-		fmt.Println("Error with readin port")
+		fmt.Println("Error with reading port")
 	}
 
 	fileRepo := repositories.NewFileRepository(tempDir)

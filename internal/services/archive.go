@@ -49,7 +49,6 @@ func (s *ArchiveService) ProcessArchive(file multipart.File, header *multipart.F
 
 func (s *ArchiveService) CreateArchive(files []string) (string, error) {
 	_, err := s.fileRepo.CreateTempFolder()
-
 	if err != nil {
 		return "", err
 	}
@@ -60,5 +59,13 @@ func (s *ArchiveService) CreateArchive(files []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	for _, file := range files {
+		err := s.fileRepo.RemoveFile(file)
+		if err != nil {
+			//fmt.Println("Error removing file:", err)
+		}
+	}
+
 	return outputFilePath, nil
 }
